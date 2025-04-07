@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spotify Playlist Tournament</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 900px;
+    }
+    .hidden {
+      display: none;
+    }
+    .matchup {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    .song {
+      display: inline-block;
+      vertical-align: top;
+      width: 45%;
+      text-align: center;
+      margin: 10px;
+    }
+    iframe {
+      border: none;
+      margin-top: 5px;
+    }
+    button {
+      margin: 10px 5px;
+      padding: 8px 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #tokenInput {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Spotify Playlist Tournament</h1>
+  <p>
+    Enter your Spotify playlist URL:
+  </p>
+  <input type="text" id="playlistUrl" placeholder="https://open.spotify.com/playlist/..." size="50"><br>
+  <p>
+    Enter your Spotify Access Token:
+  </p>
+  <input type="text" id="accessToken" placeholder="Paste your access token here" size="50" id="tokenInput"><br>
+  <button id="fetchPlaylist">Fetch Playlist &amp; Start Tournament</button>
+  <div id="error" style="color: red; margin-top:10px;"></div>
+
+  <div id="matchups" class="hidden"></div>
+  <div id="ranking" class="hidden"></div>
+
+  <script>
+    // Global Variables
+    let tracks = [];      // Array to store tracks from Spotify
+    let matchups = [];    // Array to store round-robin matchups: each is { song1, song2 }
+    let currentMatchupIndex = 0;
+    let results = {};     // Object to tally wins for each track (by track ID)
+
+    // Extract the playlist ID from a Spotify URL.
+    function extractPlaylistID(url) {
+      const regex = /playlist\/([a-zA-Z0-9]+)(?:\?si=.*)?/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    }
+
+    // Generate all unique pairs (round-robin matchups)
+    function generateMatchups(tracks) {
+      const pairs = [];
+      for (let i = 0; i < tracks.length; i++) {
+        for (let j = i + 1; j < tracks.length; j++) {
+          pairs.push({ song1: tracks[i], song2: tracks[j] });
+        }
+      }
+      return pairs;
+    }
+
+    // Display the current matchup on the page.
+    function displayCurrentMatchup() {
+      const matchupDiv = document.getElementById("matchups");
+      matchupDiv.innerHTML = ""; // Clear previous content
+
+      if (currentMatchupIndex >= matchups.length) {
+        displayRanking();
+        return;
+      }
+
+      const matchup = matchups[currentMatchupIndex];
+
+      const heading = document.createElement("h2");
+      heading.textContent = "Matchup " + (currentMatchupIndex + 1) + " of " + matchups.length;
+      matchupDiv.appendChild(heading);
+
+      const container = document.createElement("div");
+      container.className = "matchup";
+
+      // Helper function: Create a block for a song with a title and Spotify embed.
+      function createSongBlock(song) {
+        const songDiv = document.createElement("div");
+        songDiv.className = "song";
+
+        const title = document.createElement("p");
+        title.textContent = song.name + " by " + song.artists.join(", ");
+        songDiv.appendChild(title);
+
+        // Create Spotify embed using an iframe.
+        const iframe = document.createElement("iframe");
+        iframe.src = "https://open.spotify.com/embed/track/" + song.id;
+        iframe.width = "300";
+        iframe.height = "80";
+        songDiv.appendChild(iframe);
+        return songDiv;
+      }
+
+      container.appendChild(createSongBlock(matchup.song1));
+      container.appendChild(createSongBlock(matchup.song2));
+      matchupDiv.appendChild(container);
+
+      // Create winner selection buttons.
+      const button1 = document.createElement("button");
+      button1.textContent = "Select Winner: " + matchup.song1.name;
+      button1.onclick = () => recordWin(matchup.song1.id);
+
+      const button2 = document.createElement("button");
+      button2.textContent = "Select Winner: " + matchup.song2.name;
+      button2.onclick = () => recordWin(matchup.song2.id);
+
+      matchupDiv.appendChild(button1);
+      matchupDiv.appendChild(button2);
+    }
+
+    // Record the win for the chosen track, then move to the next matchup.
+    function recordWin(trackId) {
+      results[trackId] = (results[trackId] || 0) + 1;
+      currentMatchupIndex++;
+      displayCurrentMatchup();
+    }
+
+    // Display the final ranking of songs based on win counts.
+    function displayRanking() {
+      document.getElementById("matchups").classList.add("hidden");
+      const rankingDiv = document.getElementById("ranking");
+      rankingDiv.innerHTML = "<h2>Final Ranking</h2>";
+
+      let rankingArray = tracks.map(track => ({
+        id: track.id,
+        name: track.name,
+        artists: track.artists.join(", "),
+        wins: results[track.id] || 0
+      }));
+      rankingArray.sort((a, b) => b.wins - a.wins);
+
+      const ol = document.createElement("ol");
+      rankingArray.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item.name + " by " + item.artists + " — Wins: " + item.wins;
+        ol.appendChild(li);
+      });
+      rankingDiv.appendChild(ol);
+      rankingDiv.classList.remove("hidden");
+    }
+
+    // Fetch the playlist's tracks from Spotify using the provided access token.
+    async function fetchPlaylistTracks(playlistId, accessToken) {
+      const endpoint = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+      try {
+        const response = await fetch(endpoint, {
+          headers: { "Authorization": "Bearer " + accessToken }
+        });
+        if (!response.ok) {
+          throw new Error("Spotify API returned status " + response.status);
+        }
+        const data = await response.json();
+        // Map the returned items to a simplified track object.
+        return data.items.map(item => ({
+          id: item.track ? item.track.id : null,
+          name: item.track ? item.track.name : "Unknown Track",
+          artists: item.track ? item.track.artists.map(artist => artist.name) : ["Unknown Artist"]
+        })).filter(track => track.id);
+      } catch (error) {
+        console.error("Error fetching playlist:", error);
+        document.getElementById("error").textContent = "Error fetching playlist: " + error.message;
+        return [];
+      }
+    }
+
+    // Event listener for the "Fetch Playlist & Start Tournament" button.
+    document.getElementById("fetchPlaylist").addEventListener("click", async () => {
+      document.getElementById("error").textContent = "";
+      const playlistUrl = document.getElementById("playlistUrl").value;
+      const accessToken = document.getElementById("accessToken").value.trim();
+      if (!accessToken) {
+        document.getElementById("error").textContent = "Please enter your Spotify Access Token.";
+        return;
+      }
+      const playlistId = extractPlaylistID(playlistUrl);
+      if (!playlistId) {
+        document.getElementById("error").textContent = "Invalid Spotify playlist URL.";
+        return;
+      }
+      // Fetch tracks
+      tracks = await fetchPlaylistTracks(playlistId, accessToken);
+      if (tracks.length < 2) {
+        document.getElementById("error").textContent = "Playlist must contain at least two tracks.";
+        return;
+      }
+      // Initialize win counts and generate matchups.
+      results = {};
+      tracks.forEach(track => { results[track.id] = 0; });
+      matchups = generateMatchups(tracks);
+      currentMatchupIndex = 0;
+      document.getElementById("matchups").classList.remove("hidden");
+      document.getElementById("ranking").classList.add("hidden");
+      displayCurrentMatchup();
+    });
+  </script>
+</body>
+</html>

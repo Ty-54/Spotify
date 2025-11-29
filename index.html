@@ -51,29 +51,90 @@
   <details style="margin-top: 10px;" id="instructions">
     <summary><strong>How to get your Spotify Access Token</strong></summary>
     <ol>
-      <li>Go to <a href="https://developer.spotify.com/dashboard/applications" target="_blank">Spotify Developer Dashboard</a>.</li>
-      <li>Log in and click "Create an App".</li>
-      <li>Give it a name and description (anything is fine), then click "Create".</li>
-      <li>Open your new app, then click "Show Client Secret".</li>
-      <li>Copy your <strong>Client ID</strong> and <strong>Client Secret</strong>.</li>
-      <li>Open a terminal or command prompt and run the following command (replacing the placeholders):</li>
-      <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;"><code>
-curl -X POST -H "Authorization: Basic <base64-encoded-clientid:clientsecret>" \
--d grant_type=client_credentials \
-https://accounts.spotify.com/api/token
-      </code></pre>
-      <li>To create the <code>Authorization</code> header, base64 encode your <code>client_id:client_secret</code>:
-        <ul>
-          <li><strong>Linux / macOS:</strong> Use <code>echo -n 'client_id:client_secret' | base64</code></li>
-          <li><strong>Windows (PowerShell):</strong>
-            <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;"><code>
-[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("client_id:client_secret"))
-            </code></pre>
-          </li>
-        </ul>
-      </li>
-      <li>The response will contain your <code>access_token</code>. Copy it and paste it above.</li>
-    </ol>
+  <li>
+    <strong>Go to the Spotify Developer Dashboard.</strong><br>
+    Open the <a href="https://developer.spotify.com/dashboard/applications" target="_blank">Spotify Developer Dashboard</a> in your browser and log in with your normal Spotify account.
+  </li>
+
+  <li>
+    <strong>Create a new app.</strong><br>
+    Click <em>"Create an app"</em> (or <em>"Create app"</em>).<br>
+    Give it any name and description you like (these don’t affect your token), then click <em>"Create"</em> or <em>"Save"</em>.
+  </li>
+
+  <li>
+    <strong>Find your Client ID and Client Secret.</strong><br>
+    After the app is created:
+    <ul>
+      <li>Click on your new app to open it.</li>
+      <li>You will see a <strong>Client ID</strong> at the top.</li>
+      <li>Click <em>"Show client secret"</em> to reveal your <strong>Client Secret</strong>.</li>
+    </ul>
+    <strong>Keep these secret.</strong> Don’t share them or commit them to GitHub.
+  </li>
+
+  <li>
+    <strong>Copy your Client ID and Client Secret somewhere safe.</strong><br>
+    For example, put them in a note temporarily:
+    <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;">
+Client ID:     YOUR_CLIENT_ID_HERE
+Client Secret: YOUR_CLIENT_SECRET_HERE
+    </pre>
+  </li>
+
+  <li>
+    <strong>Open a terminal.</strong><br>
+    Use one of the following:
+    <ul>
+      <li><strong>Windows:</strong> Open <em>Command Prompt</em> or <em>PowerShell</em>.</li>
+      <li><strong>macOS:</strong> Open <em>Terminal</em> (Applications → Utilities → Terminal).</li>
+      <li><strong>Linux:</strong> Open your preferred terminal app.</li>
+    </ul>
+  </li>
+
+  <li>
+    <strong>Request an access token using curl.</strong><br>
+    In the terminal, run this command, replacing <code>YOUR_CLIENT_ID</code> and <code>YOUR_CLIENT_SECRET</code> with your actual values (keep the quotes):
+    <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;"><code>
+curl -X POST "https://accounts.spotify.com/api/token" ^
+  -H "Content-Type: application/x-www-form-urlencoded" ^
+  -d "grant_type=client_credentials" ^
+  -u "YOUR_CLIENT_ID:YOUR_CLIENT_SECRET"
+    </code></pre>
+    <em>Note:</em> On macOS/Linux you can use <code>\</code> instead of <code>^</code>, or put it all on one line:
+    <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;"><code>
+curl -X POST "https://accounts.spotify.com/api/token" -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials" -u "YOUR_CLIENT_ID:YOUR_CLIENT_SECRET"
+    </code></pre>
+  </li>
+
+  <li>
+    <strong>Look at the response.</strong><br>
+    If everything worked, Spotify will return a JSON response that looks like this:
+    <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;"><code>
+{
+  "access_token": "BQD12345exampleTOKEN",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}
+    </code></pre>
+    Your <strong>access token</strong> is the long string next to <code>"access_token"</code> (without the quotes).
+  </li>
+
+  <li>
+    <strong>Copy your access token.</strong><br>
+    Carefully select and copy just the value of <code>access_token</code>, for example:
+    <pre style="background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;"><code>
+BQD12345exampleTOKEN
+    </code></pre>
+    Then paste it into the box above on this page where it asks for your Spotify access token.
+  </li>
+
+  <li>
+    <strong>Remember: tokens expire.</strong><br>
+    This token usually lasts about 1 hour (<code>"expires_in": 3600</code> seconds). When it stops working, repeat these steps to get a new one.
+  </li>
+</ol>
+
   </details>
 
   <button id="fetchPlaylist">Fetch Playlist & Start Tournament</button>
